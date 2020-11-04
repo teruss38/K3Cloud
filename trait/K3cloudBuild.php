@@ -1,13 +1,12 @@
 <?php
 
-trait JdBuild
+trait K3cloudBuild
 {
     protected $_data = [];
     protected $_model = [];
     protected $_formID = "";
     protected $_limit = 0;
     protected $_fields = "";
-    protected $_nowAction = "";
 
 //    public function __call($name, $args)
 //    {

@@ -1,10 +1,12 @@
 <?php
 
-require_once "./trait/JdBuild.php";
+require_once "./trait/K3cloudBuild.php";
+require_once "./exception/K3cloudException.php";
+require_once "./request/RequestService.php";
 
-class JdService
+class K3cloudService extends RequestService
 {
-    use JdBuild;
+    use K3cloudBuild;
 
     //API文档
     const LOGIN_API = 'Kingdee.BOS.WebApi.ServicesStub.AuthService.ValidateUser.common.kdsvc';
@@ -17,8 +19,6 @@ class JdService
     const QUERYINFO_API = 'Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.QueryBusinessInfo.common.kdsvc';
     // 金蝶域名或者IP地址;/K3Cloud/
     public $cloudUrl = '';
-    // cookieJar
-    public $cookieJar = '';
     //登陆数据
     public $loginData = [];
     //语言ID,中文2052,繁体3076，英文1033
@@ -46,18 +46,147 @@ class JdService
      */
     public function login()
     {
-        $this->cookieJar = tempnam('./tmp', 'CloudSession'); //保存登录后的session
+        $this->_cookieJar = tempnam('./tmp', 'CloudSession'); //保存登录后的session
+
         $postContent = $this->_createPostData($this->loginData);
-        $url = $this->cloudUrl . self::LOGIN_API;
-        $res = json_decode($this->_curl($url, $postContent, TRUE), true);
+        $res = $this->_handle(self::LOGIN_API, $this->loginData, TRUE);
         if ($res['LoginResultType'] != 1) {
-            return $res;
+            return $this->error($res["Message"]);
         }
+        return $this->success();
+    }
+
+
+    /**
+     * 查看
+     * @param string $formID
+     * @param array $data
+     * @return mixed
+     * @example
+     * $formID = "STK_TRANSFEROUT",
+     * $data = [
+     * [
+     * "Id"=>"1",
+     * "Number"=>"1",
+     * ]
+     * ];
+     */
+    public function toView(string $formID, array $data)
+    {
+        $res = $this->form($formID)->data($data)->view();
         return $res;
     }
 
     /**
-     * 查看
+     * 保存
+     * @param string $formID
+     * @param array $model model属性
+     * @param array $data 需要替代的data属性
+     * @return mixed
+     * @example
+     * $formID = "AR_receivable",
+     * $data = [
+     * "Creator" => "",
+     * "NeedUpDateFields" => [],
+     * "NeedReturnFields" => [],
+     * "IsDeleteEntry" => "true",
+     * "SubSystemId" => "",
+     * "IsVerifyBaseDataField" => "false",
+     * "IsEntryBatchFill" => "true",
+     * "ValidateFlag" => "true",
+     * "NumberSearch" => "true",
+     * "InterationFlags" => "",
+     * "IsAutoSubmitAndAudit" => "false",
+     * ],
+     * $model = [
+     * ···(每个model的数据字段不一样，具体参考文档 https://open.kingdee.com/K3Cloud/Open/ApiCenterReportDetail.aspx)
+     * ];
+     */
+    public function toSave(string $formID, array $model, array $data = [])
+    {
+        $res = $this->form($formID)->data($data)->model($model)->save();
+        return $res;
+    }
+
+    /**
+     * 批量保存
+     * @param string $formID
+     * @param array $model model属性
+     * @param array $data 需要替代的data属性
+     * @return mixed
+     * @example
+     * $formID = "AR_receivable",
+     * $data = [
+     * "Creator" => "",
+     * "NeedUpDateFields" => [],
+     * "NeedReturnFields" => [],
+     * "IsDeleteEntry" => "true",
+     * "SubSystemId" => "",
+     * "IsVerifyBaseDataField" => "false",
+     * "IsEntryBatchFill" => "true",
+     * "ValidateFlag" => "true",
+     * "NumberSearch" => "true",
+     * "InterationFlags" => "",
+     * "IsAutoSubmitAndAudit" => "false",
+     * ],
+     * $model = [
+     * $modelArr1,$modelArr2 (每个model的数据字段不一样，具体参考文档 https://open.kingdee.com/K3Cloud/Open/ApiCenterReportDetail.aspx)
+     * ];
+     */
+    public function toBatchSave(string $formID, array $model, array $data = [])
+    {
+        $res = $this->form($formID)->data($data)->model($model)->BatchSave();
+        return $res;
+    }
+
+    /**
+     * 删除
+     * @param string $formId
+     * @param array $data
+     * @return array|bool
+     * @example
+     * $formID = "STK_TRANSFEROUT",
+     * $data = [
+     * [
+     * "Ids"=>"1,2,3",
+     * "Numbers"=>[1,2,3],
+     * ]
+     * ];
+     */
+    public function toDelete(string $formID, array $data)
+    {
+        $res = $this->form($formID)->data($data)->delete();
+        return $res;
+    }
+
+    /**
+     * 单据查询
+     * @param string $formId
+     * @param string $field 查询的字段名
+     * @param array $data 需要替代的data属性
+     * @param int $limit 返回个数，0位不限制
+     * @example
+     * $formID = "STK_TRANSFEROUT",
+     * $field = "FID,FQty,FBaseQty",
+     * $data = [
+     * [
+     * "FieldKeys" => "",     // 获取字段参数，内码，供应商id，物料id,物料编码，物料名称 ex:FID,FBaseQty,FMaterialId
+     * "FilterString" => "", // 过滤条件 ex:"FMaterialId.FNumber='HG_TEST'"
+     * "OrderString" => "", // 排序条件 ex:FID ASC
+     * "TopRowCount" => 0, // 最多允许查询的数量，0或者不要此属性表示不限制
+     * "StartRow" => 0,   // 分页取数开始行索引，从0开始，例如每页10行数据，第2页开始是10，第3页开始是20
+     * ]
+     * ],
+     * $limit = 10,
+     */
+    public function toGetBill(string $formID, string $field, array $data = [], int $limit = 0)
+    {
+        $res = $this->form($formID)->field($field)->data($data)->limit($limit)->getBill();
+        return $res;
+    }
+
+    /**
+     * 查看 - 链式
      * @return array|mixed
      */
     public function view()
@@ -69,17 +198,15 @@ class JdService
         ];
         $res = $this->_handle(self::VIEW_API, $defaultData);
         if ($res['Result']['ResponseStatus'] == null) {
-            return $res['Result']['Result'];
+            return $this->success($res['Result']['Result']);
         } else {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
+            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
         }
+
     }
 
     /**
-     * 保存
+     * 保存 - 链式
      * @return array|mixed
      */
     public function save()
@@ -100,16 +227,13 @@ class JdService
         $this->_nowAction = __FUNCTION__;
         $res = $this->_handle(self::SAVE_API, $defaultData);
         if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
+            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
         }
-        return $res['Result']['ResponseStatus']['SuccessEntitys'];
+        return $this->success($res['Result']['ResponseStatus']['SuccessEntitys']);
     }
 
     /**
-     * 批量保存
+     * 批量保存 - 链式
      * @return array|mixed
      */
     public function batchSave()
@@ -130,16 +254,13 @@ class JdService
         $this->_nowAction = __FUNCTION__;
         $res = $this->_handle(self::BATCHSAVE_API, $defaultData);
         if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
+            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
         }
-        return $res['Result']['ResponseStatus']['SuccessEntitys'];
+        return $this->success($res['Result']['ResponseStatus']['SuccessEntitys']);
     }
 
     /**
-     * 删除
+     * 删除 - 链式
      * @return array|bool
      */
     public function delete()
@@ -152,16 +273,13 @@ class JdService
         $this->_nowAction = __FUNCTION__;
         $res = $this->_handle(self::DELETE_API, $defaultData);
         if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
+            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
         }
-        return true;
+        return $this->success();
     }
 
     /**
-     * 单据查询
+     * 单据查询 - 链式
      * @return array
      */
     public function getBill(): array
@@ -178,12 +296,9 @@ class JdService
         $fields = $this->_fields;
         $this->_nowAction = __FUNCTION__;
         $res = $this->_handle(self::GETBILL_API, $defaultData);
-        if (isset($res[0][0]['Result']['ResponseStatus']['IsSuccess'])) {
+        if (isset($res[0][0]['Result']['ResponseStatus']['IsSuccess']) && !$res[0][0]['Result']['ResponseStatus']['IsSuccess']) {
             $res = $res[0][0];
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
+            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
         }
         //整理格式
         $newRes = [];
@@ -194,7 +309,7 @@ class JdService
                 $newRes[$k][$field] = $v;
             }
         }
-        return $newRes;
+        return $this->success($newRes);
     }
 
     /**
@@ -212,7 +327,7 @@ class JdService
                 'message' => $res['Result']['ResponseStatus']['Errors']
             ];
         }
-        return $res;
+        return $this->success(res);
     }
 
     /**
@@ -230,23 +345,35 @@ class JdService
                 'message' => $res['Result']['ResponseStatus']['Errors']
             ];
         }
-        return $res;
+        return $this->success(res);
     }
 
     /**
      * 处理请求
      * @param string $api
      * @param array $defalutData
+     * @param bool $isLogin
      * @return mixed
      */
-    private function _handle(string $api, array $defalutData = [])
+    private function _handle(string $api, array $defalutData = [], bool $isLogin = FALSE)
     {
-        $data = $this->_formatData($defalutData);
-        $postData = $this->_createPostData($data);
+        if (!$isLogin) {
+            $data = $this->_formatData($defalutData);
+            $postData = $this->_createPostData($data);
+            //还原初始化属性
+            $this->_initData();
+        } else {
+            $postData = $this->_createPostData($defalutData);
+        }
         $url = $this->cloudUrl . $api;
-        //还原初始化属性
-        $this->_initData();
-        return json_decode($this->_curl($url, $postData), true);
+        $return = $this->_curl($url, $postData, $isLogin);
+        if (!$return["ask"]) {
+            throw new \K3cloudException($return);
+            return ["message" => $return["message"]];
+        } else {
+            return json_decode($return["result"], true);
+        }
+        return json_decode($this->_curl($url, $postData, $isLogin), true);
     }
 
     /**
@@ -344,50 +471,5 @@ class JdService
                 . chr(125); // "}"
             return $uuid;
         };
-    }
-
-    /**
-     * 调取接口
-     * @param string $url
-     * @param string $postContent
-     * @param bool $isLogin
-     * @return bool|string
-     */
-    private function _curl(string $url, string $postContent, bool $isLogin = FALSE)
-    {
-        $ch = curl_init($url);
-
-        $thisHeader = array(
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($postContent)
-        );
-
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $thisHeader);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postContent);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        if ($isLogin) {
-            curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJar);
-        } else {
-            curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJar);
-        }
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-
-        $result = curl_exec($ch);
-        curl_close($ch);
-
-        return $result;
-    }
-
-    /**
-     * 获取登陆数据
-     * @return array
-     */
-    public function getLoginData(): array
-    {
-        return $this->loginData;
     }
 }

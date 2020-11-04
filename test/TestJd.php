@@ -9,34 +9,37 @@ class TestJd
      */
     public static function testLogin()
     {
-        $client = new JdService("http://47.102.103.17/k3cloud/", "5c89cb426c2c68", "演示账户8", "88888888");
+        $client = new K3cloudService("http://47.102.103.17/k3cloud/", "5c89cb426c2c68", "演示账户8", "88888888");
         $res = $client->login();
         return $res;
     }
 
     /**
      * 查看
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param string $formID
      * @param array $saveList
      * @return array
      */
-    public static function testView(\JdService $client, string $formID, array $saveList)
+    public static function testView(\K3cloudService $client, string $formID, array $saveList)
     {
-        $res = $client->form($formID)->data([
+        $res = $client->toView($formID, [
             "Id" => $saveList[0]['Id']
-        ])->view($formID, $data);
+        ]);
+//        $res = $client->form($formID)->data([
+//            "Id" => $saveList[0]['Id']
+//        ])->view();
         return $res;
     }
 
     /**
      * 删除
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param string $formID
      * @param array $saveList
      * @return array|bool
      */
-    public static function testDelete(\JdService $client, string $formID, array $saveList)
+    public static function testDelete(\K3cloudService $client, string $formID, array $saveList)
     {
         $idList = "";
         $numberList = [];
@@ -52,40 +55,191 @@ class TestJd
             "Ids" => $idList,
             "Numbers" => $numberList
         ];
-        $res = $client->form($formID)->data($data)->delete();
+        $res = $client->toDelete($formID, $data);
+//        $res = $client->form($formID)->data($data)->delete();
         return $res;
     }
 
-
-//    public static function testQueryInfo(\JdService $client)
-//    {
-//        $data = [
-//            'FormId' => 'STK_Inventory'
-//        ];
-//        $res = $client->queryInfo('STK_Inventory', $data);
-//        return $res;
-//    }
-
     /**
      * 即时库存 - 单据查询
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param string $formID
      * @param int $limit
      * @return array
      */
-    public static function testBill(\JdService $client, string $formID, string $field, array $data = [])
+    public static function testBill(\K3cloudService $client, string $formID, string $field, array $data = [])
     {
         $res = $client->form($formID)->field($field)->data($data)->limit(10)->getBill();
         return $res;
     }
 
+    //    public static function testQueryInfo(\K3cloudService $client)
+    //    {
+    //        $data = [
+    //            'FormId' => 'STK_Inventory'
+    //        ];
+    //        $res = $client->queryInfo('STK_Inventory', $data);
+    //        return $res;
+    //    }
+
+    /**
+     * 物料 - 保存
+     * @param K3cloudService $client
+     * @param $formId
+     * @param false $batch
+     * @return mixed
+     */
+    public static function testBdMaterialSave(\K3cloudService $client, $formId, $batch = false)
+    {
+        $model = [
+            "FCUSTID" => 0,
+            "FCreateOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FUseOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FName" => "特朗普",
+            "FCOUNTRY" => [
+                "FNumber" => "China"
+            ],
+            "FINVOICETITLE" => "特朗普",
+            "FIsGroup" => false,
+            "FIsDefPayer" => false,
+            "FCustTypeId" => [
+                "FNumber" => "KHLB001_SYS"
+            ],
+            "FTRADINGCURRID" => [
+                "FNumber" => "PRE001"
+            ],
+            "FInvoiceType" => "1",
+            "FTaxType" => [
+                "FNumber" => "SFL02_SYS"
+            ],
+            "FPriority" => 1,
+            "FTaxRate" => [
+                "FNumber" => "SL02_SYS"
+            ],
+            "FISCREDITCHECK" => true,
+            "FIsTrade" => true,
+            "FT_BD_CUSTOMEREXT" => [
+                "FEnableSL" => false
+            ],
+        ];
+        if (!$batch) {
+            $res = $client->toSave($formId, $model);
+        } else {
+            $models = [$model, $model];
+            $res = $client->toBatchSave($formId, $models, ["BatchCount" => count($models)]);
+        }
+        return $res;
+    }
+
+    /**
+     * 客户 - 保存
+     * @param K3cloudService $client
+     * @param $formId
+     * @param false $batch
+     * @return mixed
+     */
+    public static function testBdCustomerSave(\K3cloudService $client, $formId, $batch = false)
+    {
+        $model = [
+            "FCUSTID" => 0,
+            "FCreateOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FUseOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FName" => "特朗普",
+            "FCOUNTRY" => [
+                "FNumber" => "China"
+            ],
+            "FINVOICETITLE" => "特朗普",
+            "FIsGroup" => false,
+            "FIsDefPayer" => false,
+            "FCustTypeId" => [
+                "FNumber" => "KHLB001_SYS"
+            ],
+            "FTRADINGCURRID" => [
+                "FNumber" => "PRE001"
+            ],
+            "FInvoiceType" => "1",
+            "FTaxType" => [
+                "FNumber" => "SFL02_SYS"
+            ],
+            "FPriority" => 1,
+            "FTaxRate" => [
+                "FNumber" => "SL02_SYS"
+            ],
+            "FISCREDITCHECK" => true,
+            "FIsTrade" => true,
+            "FT_BD_CUSTOMEREXT" => [
+                "FEnableSL" => false
+            ],
+        ];
+        if (!$batch) {
+            $res = $client->toSave($formId, $model);
+        } else {
+            $models = [$model, $model];
+            $res = $client->toBatchSave($formId, $models, ["BatchCount" => count($models)]);
+        }
+        return $res;
+    }
+
+    /**
+     * 仓库 - 保存
+     * @param K3cloudService $client
+     * @param $formId
+     * @param false $batch
+     * @return mixed
+     */
+    public static function testBdStockSave(\K3cloudService $client, $formId, $batch = false)
+    {
+        $model = [
+            "FNAME" => "小仓仓",
+            "FStockId" => 0,
+            "FCreateOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FUseOrgId" => [
+                "FNumber" => "100"
+            ],
+            "FStockProperty" => "1",
+            "FStockStatusType" => "0,1,2,3,4,5,6,7,8",
+            "FDefReceiveStatusId" => [
+                "FNumber" => "KCZT02_SYS"
+            ],
+            "FDefStockStatusId" => [
+                "FNumber" => "KCZT01_SYS"
+            ],
+            "FAllowMinusQty" => false,
+            "FIsGYStock" => false,
+            "FAllowLock" => true,
+            "FNotExpQty" => false,
+            "FIsOpenLocation" => false,
+            "FAllowMRPPlan" => true,
+            "FAvailablePicking" => true,
+            "FAvailableAlert" => true,
+            "FSortingPriority" => 1,
+        ];
+        if (!$batch) {
+            $res = $client->toSave($formId, $model);
+        } else {
+            $models = [$model, $model];
+            $res = $client->toBatchSave($formId, $models, ["BatchCount" => count($models)]);
+        }
+        return $res;
+    }
+
     /**
      * 应收单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param false $batch
      * @return array
      */
-    public static function testArReceivableSave(\JdService $client, $batch = false)
+    public static function testArReceivableSave(\K3cloudService $client, $formId, $batch = false)
     {
         $model = [
             "FID" => 0,
@@ -189,23 +343,25 @@ class TestJd
                 ]
             ]
         ];
-        $client = $client->form('AR_receivable');
+//        $client = $client->form('AR_receivable');
         if (!$batch) {
-            $res = $client->model($model)->save();
+            $res = $client->toSave($formId, $model);
+//            $res = $client->model($model)->save();
         } else {
             $models = [$model, $model];
-            $res = $client->model([$model, $model])->data(["BatchCount" => count($models)])->batchSave();
+            $res = $client->toBatchSave($formId, $models, ["BatchCount" => count($models)]);
+//            $res = $client->model([$model, $model])->data(["BatchCount" => count($models)])->batchSave();
         }
         return $res;
     }
 
     /**
      * 分步式调出单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param false $batch
      * @return array
      */
-    public static function testStkTransferOutSave(\JdService $client, $batch = false)
+    public static function testStkTransferOutSave(\K3cloudService $client, $batch = false)
     {
         $model = ["FID" => 0,
             "FOwnerTypeIdHead" => "BD_OwnerOrg",
@@ -299,11 +455,11 @@ class TestJd
 
     /**
      * 分步式调入单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param false $batch
      * @return array
      */
-    public static function testStkTransferInSave(\JdService $client, $batch = false, $dataHeader = [])
+    public static function testStkTransferInSave(\K3cloudService $client, $batch = false, $dataHeader = [])
     {
         $model = [
             "FID" => 0,
@@ -322,7 +478,7 @@ class TestJd
             "FDate" => "2020-10-29 00:00:00",
             "FOwnerTypeOutIdHead" => "BD_OwnerOrg",
             "FOwnerOutIdHead" => [
-                "FNumber" => "110",
+                "FNumber" => "100",
             ],
             "FSTOCKERID" => [
                 "FNumber" => "222111"
@@ -336,6 +492,32 @@ class TestJd
             "FOwnerTypeIdHead" => "BD_OwnerOrg",
             "FSTKTRSINENTRY" => [
                 0 => [
+                    "FSrcBillType " => "STK_TRANSFEROUT",
+                    "FSrcBillNo" => "FBDC000169",
+                    "FOwnerID" => [
+                        "FNumber" => "100",
+                    ],
+                    "FUnitID" => [
+                        "FNumber" => "Pcs",
+                    ],
+                    "FOwnerOutID" => [
+                        "FNumber" => "100",
+                    ],
+                    "FSrcMaterialId" => [
+                        "FNumber" => "11",
+                    ],
+                    "FMaterialID" => [
+                        "FNumber" => "11",
+                    ],
+                    "FSrcStockID" => [
+                        "FNumber" => "20200201",
+                    ],
+                    "FDestStockID" => [
+                        "FNumber" => "2020001",
+                    ],
+                    "FQty" => 1,
+                    "FPathLossQty " => 0,
+                    "FPlanTransferQty" => 2,
                     "FSrcStockStatusID" => [
                         "FNumber" => "KCZT05_SYS",
                     ],
@@ -353,6 +535,19 @@ class TestJd
                     "FKeeperID" => [
                         "FNumber" => "100",
                     ],
+                    //新增必须 默认
+                    "FSTKTSTKRANSFERINENTRY_Link" => [
+                        [
+                            "FLinkId" => 0,
+                            "FSTKTSTKRANSFERINENTRY_Link_FFlowId" => "",
+                            "FSTKTSTKRANSFERINENTRY_Link_FFlowLineId" => "0",
+                            "FSTKTSTKRANSFERINENTRY_Link_FRuleId" => "STK_TRANSFEROUT-STK_TRANSFERIN",
+                            "FSTKTSTKRANSFERINENTRY_Link_FSTableName" => "T_STK_STKTRANSFEROUTENTRY",
+                            "FSTKTSTKRANSFERINENTRY_Link_FSBillId" => "100605",
+                            "FSTKTSTKRANSFERINENTRY_Link_FSId" => "100605",
+                            "FSTKTSTKRANSFERINENTRY_Link_FBaseTransferQtyOld" => "1",
+                            "FSTKTSTKRANSFERINENTRY_Link_FBaseTransferQty" => "1",
+                        ]],
                 ],
             ],
         ];
@@ -368,11 +563,11 @@ class TestJd
 
     /**
      * 即时库存-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param false $batch
      * @return array
      */
-    public static function testStkInventorySave(\JdService $client, $batch = false)
+    public static function testStkInventorySave(\K3cloudService $client, $batch = false)
     {
         $model = [
             "FID" => 0,
@@ -395,11 +590,11 @@ class TestJd
 
     /**
      * 其它出库单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param bool $batch
      * @return array
      */
-    public static function testStkMisDeliverySave(\JdService $client, bool $batch = false)
+    public static function testStkMisDeliverySave(\K3cloudService $client, bool $batch = false)
     {
         $model = [
             "FID" => 0,
@@ -477,11 +672,11 @@ class TestJd
 
     /**
      * 销售退款单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param bool $batch
      * @return array
      */
-    public static function testSalReturnStockSave(\JdService $client, bool $batch = false)
+    public static function testSalReturnStockSave(\K3cloudService $client, bool $batch = false)
     {
         $model = [
             "FID" => 0,
@@ -596,11 +791,11 @@ class TestJd
 
     /**
      * 销售出库单-保存
-     * @param JdService $client
+     * @param K3cloudService $client
      * @param bool $batch
      * @return array
      */
-    public static function testSalOutStockSave(\JdService $client, bool $batch = false)
+    public static function testSalOutStockSave(\K3cloudService $client, bool $batch = false)
     {
         $model = [
             "FID" => 0,

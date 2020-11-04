@@ -15,15 +15,18 @@
 业务对象表单
 > https://open.kingdee.com/K3Cloud/Open/ApiCenterReportDetail.aspx#aimin2
 
-|  FORMID  | 模块 |
-| ------ | ------ |
-| SAL_OUTSTOCK | 供应链-销售-销售出库单 | 
-| SAL_RETURNSTOCK | 供应链-销售-销售退货单 |
-| STK_MisDelivery | 供应链-库存-其他出库单 |
-| STK_Inventory  | 供应链-库存-即时库存 |
-| STK_TRANSFERIN | 供应链-库存-分布式调入单 |
-| STK_TRANSFEROUT | 供应链-库存-分布式调出单 |
-| AR_receivable | 财务会计-应收款-应收单 |
+|  FORMID  | 模块 | 备注|
+| ------ | ------ | ------|
+| SAL_OUTSTOCK    | 供应链-销售-销售出库单  |   | 
+| SAL_RETURNSTOCK | 供应链-销售-销售退货单  |   |
+| STK_MisDelivery | 供应链-库存-其他出库单  |   |
+| STK_Inventory   | 供应链-库存-即时库存    |   |
+| STK_TRANSFERIN  | 供应链-库存-分布式调入单| FSTKTSTKRANSFERINENTRY_Link关联必须传入  |
+| STK_TRANSFEROUT | 供应链-库存-分布式调出单|   |
+| AR_receivable   | 财务会计-应收款-应收单  |   |
+| BD_Customer     |  基础管理-基础资料-客户 |   | 
+| BD_MATERIAL     |  基础管理-基础资料-物料 |   | 
+| BD_STOCK        |  供应链-库存-仓库       |   | 
 
 
 测试案例参考TestJd.php和test.php
