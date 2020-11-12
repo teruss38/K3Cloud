@@ -83,6 +83,7 @@ $model = [
     ···
 ];
 $res = $client->form('STK_TRANSFERIN')->data($data)->model($model)->save();
+$res = $client->toSave('STK_TRANSFERIN',$model,$data = []);
 ```
 * Request
 

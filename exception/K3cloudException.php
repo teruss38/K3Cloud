@@ -8,7 +8,7 @@
  */
 class K3cloudException extends \Exception
 {
-    /** @var string */
+    /** @var mixed */
     private $_message = null;
     /** @var string */
     private $_requestAction = null;
@@ -25,9 +25,6 @@ class K3cloudException extends \Exception
      */
     public function __construct(array $errorInfo = array())
     {
-        $this->_message = $errorInfo["message"];
-        parent::__construct($this->_message);
-
         if (array_key_exists("Exception", $errorInfo)) {
             $exception = $errorInfo["Exception"];
             if ($exception instanceof K3cloudException) {
@@ -41,8 +38,14 @@ class K3cloudException extends \Exception
             $this->_errorCode = $this->arrVal($errorInfo, "errorCode");
             $this->_errorType = $this->arrVal($errorInfo, "errorType");
             $this->_org = $this->arrVal($errorInfo, "ORG");
-
         }
+
+//        if (is_array($errorInfo["message"])) {
+//            $this->_message = json_encode($errorInfo["message"], JSON_UNESCAPED_UNICODE);
+//        } else {
+        $this->_message = $errorInfo["message"];
+//        }
+//        parent::__construct($this->_message, $this->_errorCode);
     }
 
     /**

@@ -1,5 +1,5 @@
 <?php
-//namespace AmazonAds;
+//namespace ;
 
 /**
  * K3Cloud请求类
@@ -10,63 +10,7 @@ class RequestService
     //缓存
     protected $_cookieJar = '';
     //请求接口名
-    protected $_nowAction = "";
-
-    /**
-     * 调取接口
-     * @param string $url
-     * @param string $postContent
-     * @param bool $isLogin
-     * @return bool|string
-     */
-    protected function _curl(string $url, string $postContent, bool $isLogin = FALSE)
-    {
-        $ch = curl_init($url);
-
-        $thisHeader = array(
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($postContent)
-        );
-
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $thisHeader);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postContent);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        if ($isLogin) {
-            curl_setopt($ch, CURLOPT_COOKIEJAR, $this->_cookieJar);
-        } else {
-            curl_setopt($ch, CURLOPT_COOKIEFILE, $this->_cookieJar);
-        }
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-
-        //最多循环三次
-        $requestCount = 1;
-        $return['requestAction'] = $this->_nowAction;
-        $return['org'] = $postContent;
-        while ($requestCount <= 3) {
-            //执行请求
-            $return['result'] = curl_exec($ch);
-
-            //curl是否发生错误
-            if ($errNo = curl_errno($ch)) {
-                $return['ask'] = false;
-                $return['errorType'] = 'Internalc Error';
-                $return['message'] = 'K3cloud CurlRequestError,ErrNo:' . $errNo . ',Error:' . curl_error($ch);
-            } else {
-                $return['ask'] = true;
-                $return['message'] = '';
-                break;
-            }
-            //请求次数累加
-            $requestCount++;
-        }
-        curl_close($ch);
-
-        return $return;
-    }
+    protected $_requestAction = "";
 
     /**
      * response success格式
@@ -78,6 +22,7 @@ class RequestService
     public function success($data = [], $message = "success", $code = 200)
     {
         return [
+            'ack' => true,
             "code" => $code,
             "meesage" => $message,
             'data' => $data
@@ -99,6 +44,69 @@ class RequestService
         ];
     }
 
+    /**
+     * 调取接口
+     * @param string $url
+     * @param string $postContent
+     * @param bool $isLogin
+     * @return bool|string
+     */
+    protected function _curl(string $url, string $postContent, bool $isLogin = FALSE)
+    {
+        $ch = curl_init($url);
+
+        $thisHeader = array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($postContent)
+        );
+
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+//        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $thisHeader);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postContent);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        if ($isLogin) {
+            curl_setopt($ch, CURLOPT_COOKIEJAR, $this->_cookieJar);
+        } else {
+            curl_setopt($ch, CURLOPT_COOKIEFILE, $this->_cookieJar);
+        }
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        //最多循环三次
+        $requestCount = 1;
+        $return['requestAction'] = $this->_requestAction;
+        $return['org'] = $postContent;
+        while ($requestCount <= 3) {
+            //执行请求
+            $return['result'] = curl_exec($ch);
+
+            //curl是否发生错误
+            if ($errNo = curl_errno($ch)) {
+                $return['ack'] = false;
+                $return['errorType'] = 'Internalc Error';
+                $return['errorCode'] = 500;
+                $return['message'] = 'K3cloud CurlRequestError,ErrNo:' . $errNo . ',Error:' . curl_error($ch);
+            } else {
+                $return['ack'] = true;
+                $return['message'] = 'success';
+                break;
+            }
+            //请求次数累加
+            $requestCount++;
+        }
+        curl_close($ch);
+
+        if (!$return['ack']) {
+            throw new \K3cloudException($return);
+        }
+
+        return $return;
+    }
+
+
 //    /**
 //     * curl请求
 //     * @param string $type
@@ -113,7 +121,7 @@ class RequestService
 //     */
 //    protected function _curl(string $type = 'GET', string $url, string $postContent = '', bool $isLogin = FALSE, $option = array())
 //    {
-//        $return = array('ask' => 0, 'message' => '', 'httpStatu' => '', 'data' => array());
+//        $return = array('ack' => 0, 'message' => '', 'httpStatu' => '', 'data' => array());
 //
 //        $TimeOut = isset($option['TimeOut']) ? $option['TimeOut'] : 120;
 //
@@ -184,58 +192,10 @@ class RequestService
 //        curl_close($ch);
 //        //没有错误，curl请求成功
 //        if ($return["message"] == '') {
-//            $return["ask"] = 1;
+//            $return["ack"] = 1;
 //            $return["message"] = 'success';
 //        }
 //        $return["data"] = $data;
-//
-//        return $return;
-//    }
-
-//
-//    /**
-//     * 回复格式
-//     * @param $data
-//     * @return mixed
-//     */
-//    public function response($res, $action)
-//    {
-//        //发送失败
-//        if (!isset($res['ask'])) {
-//            return [
-//                "code" => $res["code"],
-//                "message" => $res["message"],
-//            ];
-//        }
-//        switch ($action) {
-//            case "save":
-//                if ($res['data']['Result']['ResponseStatus']['IsSuccess'] == false) {
-//                    $return = [
-//                        'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-//                        'message' => $res['Result']['ResponseStatus']['Errors'],
-//                    ];
-//                }
-//                $return = [
-//                    'code' => $res["code"],
-//                    'data' => $res['data']['Result']['ResponseStatus']['SuccessEntitys']
-//                ];
-//                break;
-//            case "login":
-//                if ($res['data']['LoginResultType'] == 1) {
-//                    $return = [
-//                        'code'=>$res["code"],
-//                        'message'=>"登陆成功"
-//                    ];
-//                }else{
-//                    $return = [
-//                        'code'=>$res["code"],
-//                        'message'=>$res['data']['Message']
-//                    ];
-//                }
-//                break;
-//            case "view":
-//
-//        }
 //
 //        return $return;
 //    }

@@ -23,12 +23,12 @@ class TestJd
      */
     public static function testView(\K3cloudService $client, string $formID, array $saveList)
     {
-        $res = $client->toView($formID, [
+//        $res = $client->toDelete($formID, [
+//            "Ids" => '1100231'
+//        ]);
+        $res = $client->form($formID)->data([
             "Id" => $saveList[0]['Id']
-        ]);
-//        $res = $client->form($formID)->data([
-//            "Id" => $saveList[0]['Id']
-//        ])->view();
+        ])->view();
         return $res;
     }
 
@@ -73,15 +73,6 @@ class TestJd
         return $res;
     }
 
-    //    public static function testQueryInfo(\K3cloudService $client)
-    //    {
-    //        $data = [
-    //            'FormId' => 'STK_Inventory'
-    //        ];
-    //        $res = $client->queryInfo('STK_Inventory', $data);
-    //        return $res;
-    //    }
-
     /**
      * 物料 - 保存
      * @param K3cloudService $client
@@ -99,11 +90,11 @@ class TestJd
             "FUseOrgId" => [
                 "FNumber" => "100"
             ],
-            "FName" => "特朗普",
+            "FName" => "拜振华",
             "FCOUNTRY" => [
                 "FNumber" => "China"
             ],
-            "FINVOICETITLE" => "特朗普",
+            "FINVOICETITLE" => "拜振华xx",
             "FIsGroup" => false,
             "FIsDefPayer" => false,
             "FCustTypeId" => [
@@ -355,6 +346,156 @@ class TestJd
         return $res;
     }
 
+    /**
+     * 调拨申请单-保存
+     * @param K3cloudService $client
+     * @param string $formId
+     * @param false $batch
+     * @return array|mixed
+     */
+    public static function testStkTransferDirectSave(\K3cloudService $client, string $formId, $batch = false)
+    {
+        $model = [
+            "FID" => 0,
+            "FBillTypeID" => [
+                "FNUMBER" => "ZJDB01_SYS",
+            ],
+            "FBizType" => "NORMAL",
+            "FTransferDirect" => "GENERAL",
+            "FTransferBizType" => "InnerOrgTransfer",
+            "FSettleOrgId" => [
+                "FNumber" => "100",
+            ],
+            "FSaleOrgId" => [
+                "FNumber" => "100",
+            ],
+            "FStockOutOrgId" => [
+                "FNumber" => "100",
+            ],
+            "FOwnerTypeOutIdHead" => "BD_OwnerOrg",
+            "FOwnerOutIdHead" => [
+                "FNumber" => "100",
+            ],
+            "FStockOrgId" => [
+                "FNumber" => "100",
+            ],
+            "FIsIncludedTax" => true,
+            "FIsPriceExcludeTax" => true,
+            "FOwnerTypeIdHead" => "BD_OwnerOrg",
+            "FSETTLECURRID" => [
+                "FNUMBER" => "PRE001",
+            ],
+            "FOwnerIdHead" => [
+                "FNumber" => "100",
+            ],
+            "FDate" => "2020-11-09 00:00:00",
+            "FBaseCurrId" => [
+                "FNumber" => "PRE001",
+            ],
+            "FBillEntry" => [
+                0 => [
+                    "FMaterialId" => [
+                        "FNumber" => "0930",
+                    ],
+                    "FAuxPropId" => [
+                        "FAUXPROPID__FF100006" => [
+                            "FNumber" => "GSLL01_SYS"
+                        ],
+                        "FAUXPROPID__FF100003" => [
+                            "FNumber" => "America"
+                        ],
+                        "FAUXPROPID__FF100014" => [
+                            "FNumber" => "jd"
+                        ],
+                    ],
+                    "FUnitID" => [
+                        "FNumber" => "Pcs",
+                    ],
+                    "FQty" => 1.0,
+                    "FSrcStockId" => [
+                        "FNumber" => "0101"
+                    ],
+                    "FDestStockId" => [
+                        "FNumber" => "0301",
+                    ],
+                    "FSrcStockStatusId" => [
+                        "FNumber" => "KCZT01_SYS",
+                    ],
+                    "FDestStockStatusId" => [
+                        "FNumber" => "KCZT01_SYS",
+                    ],
+                    "FBusinessDate" => "2020-11-09 00:00:00",
+                    "FOwnerTypeOutId" => "BD_OwnerOrg",
+                    "FOwnerOutId" => [
+                        "FNumber" => "100",
+                    ],
+                    "FOwnerTypeId" => "BD_OwnerOrg",
+                    "FOwnerId" => [
+                        "FNumber" => "100",
+                    ],
+                    "FBaseUnitId" => [
+                        "FNumber" => "Pcs",
+                    ],
+                    "FBaseQty" => 1.0,
+                    "FISFREE" => false,
+                    "FKeeperTypeId" => "BD_KeeperOrg",
+                    "FKeeperId" => [
+                        "FNumber" => "100",
+                    ],
+                    "FKeeperTypeOutId" => "BD_KeeperOrg",
+                    "FKeeperOutId" => [
+                        "FNumber" => "100",
+                    ],
+                    "FDestMaterialId" => [
+                        "FNUMBER" => "0930",
+                    ],
+                    "FSaleUnitId" => [
+                        "FNumber" => "Pcs",
+                    ],
+                    "FSaleQty" => 1.0,
+                    "FSalBaseQty" => 1.0,
+                    "FPriceUnitID" => [
+                        "FNumber" => "Pcs",
+                    ],
+                    "FPriceQty" => 1.0,
+                    "FPriceBaseQty" => 1.0,
+                    "FTransReserveLink" => false,
+                    "FCheckDelivery" => false,
+                ],
+            ],
+        ];
+        $client = $client->form($formId);
+        if (!$batch) {
+            $res = $client->model($model)->save();
+        } else {
+            $models = [$model, $model];
+            $res = $client->model([$model, $model])->data(["BatchCount" => count($models)])->batchSave();
+        }
+        return $res;
+    }
+
+    /**
+     * 成本调整单-保存
+     * @param K3cloudService $client
+     * @param string $formId
+     * @param false $batch
+     * @return array|mixed
+     */
+    public static function testHsAdjustmentBillSave(\K3cloudService $client, string $formId, $batch = false)
+    {
+        $model = [
+          
+        ];
+        $client = $client->form($formId);
+        if (!$batch) {
+            $res = $client->model($model)->save();
+        } else {
+            $models = [$model, $model];
+            $res = $client->model([$model, $model])->data(["BatchCount" => count($models)])->batchSave();
+        }
+        return $res;
+    }
+    
     /**
      * 分步式调出单-保存
      * @param K3cloudService $client

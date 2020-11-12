@@ -1,25 +1,29 @@
 <?php
-error_reporting(E_ERROR);
+error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once "./K3cloudService.php";
+require_once "K3cloudService.php";
 require_once "./test/TestJd.php";
 
+
 $client = new K3cloudService("http://127.0.0.1/k3cloud/", "帐套ID", "登录名", "密码");
+//$client = new K3cloudService("http://host.docker.internal:81/k3cloud/", "", "Administrator", "888888");
 
-$res = $client->login();
+//$res = $client->login();
 //var_dump($res);
-//testArReceivable($client);
 //testBill($client,'STK_TRANSFERIN','FID,FbillNo,FOwnerTypeIdHead,FOwnerID,FQty');
-testBdStock($client);
+//testBill($client, 'BD_MATERIAL', 'FName,FNumber');
+//testBdStock($client);
 //testStkTransferOut($client);
-
+//testStkTransferDirect($client);
+//testHsAdjustmentBill($client);
+testBdCustomerBill($client);
 
 //仓库 - 查询
 function testBdStockBill(\K3cloudService $client)
 {
     $formID = 'BD_STOCK';
-    $fields = "FStockId,FName,FNumber,FDescription,FCreateDate,FPrincipal,FAddress";
+    $fields = "FStockId,FName,FNumber,FCreateDate,FStockProperty,FStockStatusType ,FCreateOrgId,FUseOrgId";
     $res = $client->toGetBill($formID, $fields, [], 10);
     var_dump($res);
 }
@@ -28,7 +32,7 @@ function testBdStockBill(\K3cloudService $client)
 function testBdMaterialBill(\K3cloudService $client)
 {
     $formID = 'BD_MATERIAL';
-    $fields = "FMATERIALID,FNumber,FName,FForbidStatus,FDescription,FCreateDate,SubHeadEntity1_FEntryId ";
+    $fields = "FMATERIALID,FNumber,FName,FForbidStatus,FCreateOrgId,FUseOrgId,FCreateDate,";
     $res = $client->toGetBill($formID, $fields, [], 10);
     var_dump($res);
 }
@@ -37,7 +41,7 @@ function testBdMaterialBill(\K3cloudService $client)
 function testBdCustomerBill(\K3cloudService $client)
 {
     $formID = 'BD_Customer';
-    $fields = "FCUSTID,FNumber,FName,FForbidStatus,FCreateDate";
+    $fields = "FCUSTID,FNumber,FName,FForbidStatus,FCreateOrgId,FUseOrgId,FCreateDate";
     $res = $client->toGetBill($formID, $fields, [], 10);
     //    $res = $client->form($formID)->field($fields)->limit(10)->getBill();
     var_dump($res);
@@ -74,7 +78,11 @@ function testBdStock(\K3cloudService $client)
 function testBdMaterial(\K3cloudService $client)
 {
     $formID = 'BD_MATERIAL';
-    $saveList = TestJd::testBdMaterialSave($client, $formID, true);
+//    $res = $client->toDelete($formID, [
+//        "Ids" => 110023
+//    ]);
+//    var_dump($res);
+    $saveList = TestJd::testBdMaterialSave($client, $formID, false);
     testApi($client, $formID, $saveList);
 }
 
@@ -83,6 +91,24 @@ function testBdCustomer(\K3cloudService $client)
 {
     $formID = 'BD_Customer';
     $saveList = TestJd::testBdCustomerSave($client, $formID, true);
+//    var_dump($saveList);
+    testApi($client, $formID, $saveList);
+}
+
+//直接调拨单
+function testStkTransferDirect(\K3cloudService $client)
+{
+    $formID = 'STK_TransferDirect';
+    $saveList = TestJd::testStkTransferDirectSave($client, $formID, true);
+//    var_dump($saveList);
+    testApi($client, $formID, $saveList);
+}
+
+//成本调整单
+function testHsAdjustmentBill(\K3cloudService $client)
+{
+    $formID = 'HS_AdjustmentBill';
+    $saveList = TestJd::testHsAdjustmentBillSave($client, $formID, true);
 //    var_dump($saveList);
     testApi($client, $formID, $saveList);
 }
@@ -141,7 +167,7 @@ function testApi(\K3cloudService $client, string $formID, $saveList)
 {
     var_dump($saveList);
     if (isset($saveList['data'])) {
-        //    var_dump(TestJd::testView($client, $formID, $saveList['data']));
+        var_dump(TestJd::testView($client, $formID, $saveList['data']));
         var_dump(TestJd::testDelete($client, $formID, $saveList['data']));
     }
 }

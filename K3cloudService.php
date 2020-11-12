@@ -49,13 +49,13 @@ class K3cloudService extends RequestService
         $this->_cookieJar = tempnam('./tmp', 'CloudSession'); //保存登录后的session
 
         $postContent = $this->_createPostData($this->loginData);
+        $this->_requestAction = 'login';
         $res = $this->_handle(self::LOGIN_API, $this->loginData, TRUE);
-        if ($res['LoginResultType'] != 1) {
-            return $this->error($res["Message"]);
+        if (!$res['ack']) {
+            return $res;
         }
         return $this->success();
     }
-
 
     /**
      * 查看
@@ -196,13 +196,12 @@ class K3cloudService extends RequestService
             "Number" => "",
             "Id" => "",
         ];
+        $this->_requestAction = __FUNCTION__;
         $res = $this->_handle(self::VIEW_API, $defaultData);
-        if ($res['Result']['ResponseStatus'] == null) {
-            return $this->success($res['Result']['Result']);
-        } else {
-            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
+        if (!$res['ack']) {
+            return $res;
         }
-
+        return $this->success($res['Result']['Result']);
     }
 
     /**
@@ -224,10 +223,10 @@ class K3cloudService extends RequestService
             "InterationFlags" => "",
             "IsAutoSubmitAndAudit" => "false",
         ];
-        $this->_nowAction = __FUNCTION__;
+        $this->_requestAction = __FUNCTION__;
         $res = $this->_handle(self::SAVE_API, $defaultData);
-        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
+        if (!$res['ack']) {
+            return $res;
         }
         return $this->success($res['Result']['ResponseStatus']['SuccessEntitys']);
     }
@@ -251,10 +250,10 @@ class K3cloudService extends RequestService
             "InterationFlags" => "",
             "IsAutoSubmitAndAudit" => "false",
         ];
-        $this->_nowAction = __FUNCTION__;
+        $this->_requestAction = __FUNCTION__;
         $res = $this->_handle(self::BATCHSAVE_API, $defaultData);
-        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
+        if (!$res['ack']) {
+            return $res;
         }
         return $this->success($res['Result']['ResponseStatus']['SuccessEntitys']);
     }
@@ -270,15 +269,15 @@ class K3cloudService extends RequestService
             "Numbers" => [],
             "Ids" => "",
         ];
-        $this->_nowAction = __FUNCTION__;
+        $this->_requestAction = __FUNCTION__;
         $res = $this->_handle(self::DELETE_API, $defaultData);
-        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
+        if (!$res['ack']) {
+            return $res;
         }
         return $this->success();
     }
 
-    /**
+    /**k
      * 单据查询 - 链式
      * @return array
      */
@@ -294,15 +293,15 @@ class K3cloudService extends RequestService
             "Limit" => $this->_limit,    // 分页取数每页允许获取的数据，最大不能超过200
         ];
         $fields = $this->_fields;
-        $this->_nowAction = __FUNCTION__;
+        $this->_requestAction = __FUNCTION__;
         $res = $this->_handle(self::GETBILL_API, $defaultData);
-        if (isset($res[0][0]['Result']['ResponseStatus']['IsSuccess']) && !$res[0][0]['Result']['ResponseStatus']['IsSuccess']) {
-            $res = $res[0][0];
-            return $this->error($res['Result']['ResponseStatus']['Errors'], $res['Result']['ResponseStatus']['ErrorCode']);
+        if (!$res['ack']) {
+            return $res;
         }
         //整理格式
         $newRes = [];
         $fields = explode(",", $fields);
+        unset($res['ack']);
         foreach ($res as $k => $each) {
             foreach ($each as $i => $v) {
                 $field = $fields[$i];
@@ -310,42 +309,6 @@ class K3cloudService extends RequestService
             }
         }
         return $this->success($newRes);
-    }
-
-    /**
-     * TODO！先不开发 暂存
-     * @return array
-     */
-    public function draft()
-    {
-        $defalutData = [];
-        $this->_nowAction = __FUNCTION__;
-        $res = $this->_handle(self::DRAFT_API, $defalutData);
-        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
-        }
-        return $this->success(res);
-    }
-
-    /**
-     * TODO！跑不通 元数据查询
-     * @return array
-     */
-    public function queryInfo()
-    {
-        $defaultData = [];
-        $this->_nowAction = __FUNCTION__;
-        $res = $this->_handle(self::QUERYINFO_API, $defaultData);
-        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
-            return [
-                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
-                'message' => $res['Result']['ResponseStatus']['Errors']
-            ];
-        }
-        return $this->success(res);
     }
 
     /**
@@ -357,23 +320,76 @@ class K3cloudService extends RequestService
      */
     private function _handle(string $api, array $defalutData = [], bool $isLogin = FALSE)
     {
-        if (!$isLogin) {
-            $data = $this->_formatData($defalutData);
-            $postData = $this->_createPostData($data);
-            //还原初始化属性
-            $this->_initData();
-        } else {
-            $postData = $this->_createPostData($defalutData);
+        try {
+            if (!$isLogin) {
+                $data = $this->_formatData($defalutData);
+                $postData = $this->_createPostData($data);
+                //还原初始化属性
+                $this->_initData();
+            } else {
+                $postData = $this->_createPostData($defalutData);
+            }
+            $url = $this->cloudUrl . $api;
+
+            $return = $this->_curl($url, $postData, $isLogin);
+            $res = json_decode($return["result"], true);
+            if (!$res) {
+                $erroInfo = [
+                    'ack' => false,
+                    'message' => "Web Api Error",
+                    'errorCode' => 500,
+                    'errorType' => 'Unresolvable Data',
+                    'requestAction' => $this->_requestAction,
+                ];
+                throw new \K3cloudException($erroInfo);
+            }
+            if ($this->_requestAction == 'login') {
+                if ($res['LoginResultType'] != 1) {
+                    $erroInfo = [
+                        'ack' => false,
+                        'message' => $res['Message'],
+                        'errorCode' => 500,
+                        'errorType' => 'Api Data Error',
+                        'requestAction' => $this->_requestAction,
+                    ];
+                    throw new \K3cloudException($erroInfo);
+                }
+            } else if ($this->_requestAction == 'getBill') {
+                if (isset($res[0][0]['Result']['ResponseStatus']['IsSuccess'])
+                    && !$res[0][0]['Result']['ResponseStatus']['IsSuccess']) {
+                    $res = $res[0][0];
+                    $erroInfo = [
+                        'ack' => false,
+                        'message' => $res['Result']['ResponseStatus']['Errors'],
+                        'errorCode' => $res['Result']['ResponseStatus']['ErrorCode'],
+                        'errorType' => 'Api Data Error',
+                        'requestAction' => $this->_requestAction,
+                    ];
+                    throw new \K3cloudException($erroInfo);
+                }
+            } else {
+                if (isset($res['Result']['ResponseStatus']['IsSuccess'])
+                    && $res['Result']['ResponseStatus']['IsSuccess'] == false) {
+                    $erroInfo = [
+                        'ack' => false,
+                        'message' => $res['Result']['ResponseStatus']['Errors'],
+                        'errorCode' => $res['Result']['ResponseStatus']['ErrorCode'],
+                        'errorType' => 'Api Data Error',
+                        'requestAction' => $this->_requestAction,
+                    ];
+                    throw new \K3cloudException($erroInfo);
+                }
+            }
+            $res['ack'] = true;
+            return $res;
+        } catch (K3cloudException $e) {
+            return [
+                'ack' => false,
+                'message' => $e->getErrorMessage(),
+                'code' => $e->getErrorCode(),
+                'errType' => $e->getErrorType(),
+                'requestAction' => $e->getRequestAction(),];
         }
-        $url = $this->cloudUrl . $api;
-        $return = $this->_curl($url, $postData, $isLogin);
-        if (!$return["ask"]) {
-            throw new \K3cloudException($return);
-            return ["message" => $return["message"]];
-        } else {
-            return json_decode($return["result"], true);
-        }
-        return json_decode($this->_curl($url, $postData, $isLogin), true);
     }
 
     /**
@@ -395,7 +411,7 @@ class K3cloudService extends RequestService
         }
 
         //查单据时,强替换属性
-        if ($this->_nowAction == "getBill") {
+        if ($this->_requestAction == "getBill") {
             if ($this->_formID != "") {
                 $data["FormId"] = $this->_formID;
                 $this->_formID = "";
@@ -426,11 +442,12 @@ class K3cloudService extends RequestService
      * 还原初始化属性
      * 因为不知道login的时效性，没有做单例模式，还原属性避免一个实例复用导致的数据混乱
      */
-    private function _initData()
+    private
+    function _initData()
     {
         $this->_formID = "";
         $this->_limit = 0;
-        $this->_nowAction = "";
+//        $this->_requestAction = "";
         $this->_fields = "";
         $this->_model = [];
         $this->_data = [];
@@ -441,7 +458,8 @@ class K3cloudService extends RequestService
      * @param $parameters
      * @return string
      */
-    private function _createPostData($parameters): string
+    private
+    function _createPostData($parameters): string
     {
         return json_encode([
             'format' => 1,
@@ -457,7 +475,8 @@ class K3cloudService extends RequestService
      * 生成GUID
      * @return Closure
      */
-    private function _createGUID()
+    private
+    function _createGUID()
     {
         return function () {
             $charid = strtoupper(md5(uniqid(mt_rand(), true)));
@@ -471,5 +490,44 @@ class K3cloudService extends RequestService
                 . chr(125); // "}"
             return $uuid;
         };
+    }
+
+
+    /**
+     * TODO！先不开发 暂存
+     * @return array
+     */
+    public
+    function draft()
+    {
+        $defalutData = [];
+        $this->_requestAction = __FUNCTION__;
+        $res = $this->_handle(self::DRAFT_API, $defalutData);
+        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
+            return [
+                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
+                'message' => $res['Result']['ResponseStatus']['Errors']
+            ];
+        }
+        return $this->success(res);
+    }
+
+    /**
+     * TODO！跑不通 元数据查询
+     * @return array
+     */
+    public
+    function queryInfo()
+    {
+        $defaultData = [];
+        $this->_requestAction = __FUNCTION__;
+        $res = $this->_handle(self::QUERYINFO_API, $defaultData);
+        if ($res['Result']['ResponseStatus']['IsSuccess'] == false) {
+            return [
+                'code' => $res['Result']['ResponseStatus']['ErrorCode'],
+                'message' => $res['Result']['ResponseStatus']['Errors']
+            ];
+        }
+        return $this->success(res);
     }
 }
